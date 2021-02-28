@@ -1,0 +1,3 @@
+https://stackoverflow.com/questions/50443411/how-to-load-a-tflite-model-in-script
+
+https://coral.ai/models/

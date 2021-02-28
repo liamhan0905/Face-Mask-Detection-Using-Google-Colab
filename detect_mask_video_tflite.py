@@ -10,16 +10,22 @@ import time
 import cv2
 import os
 
-def detect_and_predict_mask(frame, faceNet, interpreter):
+def detect_and_predict_mask(frame, face_interpreter, interpreter):
 	# grab the dimensions of the frame and then construct a blob
 	# from it
 	(h, w) = frame.shape[:2]
-	blob = cv2.dnn.blobFromImage(frame, 1.0, (224, 224),
-		(104.0, 177.0, 123.0))
+	# blob = cv2.dnn.blobFromImage(frame, 1.0, (224, 224),
+	# 	(104.0, 177.0, 123.0))
 
 	# pass the blob through the network and obtain the face detections
-	faceNet.setInput(blob)
-	detections = faceNet.forward()
+	# faceNet.setInput(blob)
+	# detections = faceNet.forward()
+	face_input_data = np.expand_dims(frame, axis=0)
+	face_interpreter.set_tensor(face_input_details[0]['index'], face_input_data)
+	face_interpreter.invoke()
+	
+	detections = face_interpreter.get_tensor(face_output_details[0]['index'])
+
 	# print(detections.shape)
 
 	# initialize our list of faces, their corresponding locations,
@@ -86,15 +92,23 @@ def detect_and_predict_mask(frame, faceNet, interpreter):
 # import pdb
 # pdb.set_trace()
 # load our serialized face detector model from disk
-prototxtPath = "./face_detector/deploy.prototxt"
-weightsPath = "./face_detector/res10_300x300_ssd_iter_140000.caffemodel"
-faceNet = cv2.dnn.readNet(prototxtPath, weightsPath)
+# prototxtPath = "./face_detector/deploy.prototxt"
+# weightsPath = "./face_detector/res10_300x300_ssd_iter_140000.caffemodel"
+# faceNet = cv2.dnn.readNet(prototxtPath, weightsPath)
 
-# load the face mask detector model from disk
-# maskNet = load_model("mask_detector_new.model")
+face_path = "ssd_mobilenet_v2_face_quant_postprocess_edgetpu.tflite"
+
+# face_interpreter = tf.lite.Interpreter(face_path)
+face_interpreter = tf.lite.Interpreter(model_path=face_path,
+                              experimental_delegates=[load_delegate('libedgetpu.so.1.0')])
+face_interpreter.allocate_tensors()
+
+face_input_details = face_interpreter.get_input_details()
+face_output_details = face_interpreter.get_output_details()
+
+
 
 maskNet_path = "mask_detector.tflite"
-#maskNet = load_model(maskNet_path)
 
 interpreter = tf.lite.Interpreter(maskNet_path)
 interpreter.allocate_tensors()
@@ -122,7 +136,6 @@ cv2.setWindowProperty("Frame",cv2.WND_PROP_FULLSCREEN,cv2.WINDOW_FULLSCREEN)
 while True:
 	# grab the frame from the threaded video stream and resize it
 	# to have a maximum width of 400 pixels
-	# frame = vs.read()q
 	ret, frame = cap.read()
 
 	# frame = imutils.resize(frame, width=400)
@@ -130,7 +143,7 @@ while True:
 	
 	# detect faces in the frame and determine if they are wearing a
 	# face mask or not
-	(locs, preds) = detect_and_predict_mask(frame, faceNet, interpreter)
+	(locs, preds) = detect_and_predict_mask(frame, face_interpreter, interpreter)
 
 	# loop over the detected face locations and their corresponding
 	# locations
@@ -138,8 +151,8 @@ while True:
 		# unpack the bounding box and predictions
 		(startX, startY, endX, endY) = box
 
-		mask = preds[0][0]
-		withoutMask = preds[0][1]
+		mask = pred[0]
+		withoutMask = pred[1]
 		# (mask, withoutMask) = pred
 
 		# determine the class label and color we'll use to draw
