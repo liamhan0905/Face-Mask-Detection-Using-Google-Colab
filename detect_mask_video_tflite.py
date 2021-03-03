@@ -10,12 +10,20 @@ import time
 import cv2
 import os
 
+
+import argparse
+import sys
+import time
+from threading import Thread
+import importlib.util
+
+
 def detect_and_predict_mask(frame, face_interpreter, interpreter):
 	# grab the dimensions of the frame and then construct a blob
 	# from it
 	(h, w) = frame.shape[:2]
-	# blob = cv2.dnn.blobFromImage(frame, 1.0, (224, 224),
-	# 	(104.0, 177.0, 123.0))
+	blob = cv2.dnn.blobFromImage(frame, 1.0, (320, 320),
+		(104.0, 177.0, 123.0))
 
 	# pass the blob through the network and obtain the face detections
 	# faceNet.setInput(blob)
@@ -65,29 +73,29 @@ def detect_and_predict_mask(frame, face_interpreter, interpreter):
 			# lists
 			faces.append(face)
 			locs.append((startX, startY, endX, endY))
-
+	return locs
 	# only make a predictions if at least one face was detected
-	if len(faces) > 0:
-		# for faster inference we'll make batch predictions on *all*
-		# faces at the same time rather than one-by-one predictions
-		# in the above `for` loop
-		# faces = np.array(faces, dtype="float32")
+	# if len(faces) > 0:
+	# 	# for faster inference we'll make batch predictions on *all*
+	# 	# faces at the same time rather than one-by-one predictions
+	# 	# in the above `for` loop
+	# 	# faces = np.array(faces, dtype="float32")
 
-		faces_img = np.array(faces, dtype="float32")
-		input_data = faces_img
-		# input_data = np.expand_dims(faces_img, axis=0)
+	# 	faces_img = np.array(faces, dtype="float32")
+	# 	input_data = faces_img
+	# 	# input_data = np.expand_dims(faces_img, axis=0)
 		
 
-		interpreter.set_tensor(input_details[0]['index'], input_data)
-		interpreter.invoke()
+	# 	interpreter.set_tensor(input_details[0]['index'], input_data)
+	# 	interpreter.invoke()
 		
-		preds = interpreter.get_tensor(output_details[0]['index'])
+	# 	preds = interpreter.get_tensor(output_details[0]['index'])
 
-		# preds = maskNet.predict(faces, batch_size=32)
+	# 	# preds = maskNet.predict(faces, batch_size=32)
 
-	# return a 2-tuple of the face locations and their corresponding
-	# locations
-	return (locs, preds)
+	# # return a 2-tuple of the face locations and their corresponding
+	# # locations
+	# return (locs, preds)
 
 # import pdb
 # pdb.set_trace()
@@ -97,6 +105,17 @@ def detect_and_predict_mask(frame, face_interpreter, interpreter):
 # faceNet = cv2.dnn.readNet(prototxtPath, weightsPath)
 
 face_path = "ssd_mobilenet_v2_face_quant_postprocess_edgetpu.tflite"
+
+use_TPU = True
+pkg = importlib.util.find_spec('tflite_runtime')
+if pkg:
+    from tflite_runtime.interpreter import Interpreter
+    if use_TPU:
+        from tflite_runtime.interpreter import load_delegate
+else:
+    from tensorflow.lite.python.interpreter import Interpreter
+    if use_TPU:
+        from tensorflow.lite.python.interpreter import load_delegate
 
 # face_interpreter = tf.lite.Interpreter(face_path)
 face_interpreter = tf.lite.Interpreter(model_path=face_path,
@@ -143,29 +162,32 @@ while True:
 	
 	# detect faces in the frame and determine if they are wearing a
 	# face mask or not
-	(locs, preds) = detect_and_predict_mask(frame, face_interpreter, interpreter)
-
+	# (locs, preds) = detect_and_predict_mask(frame, face_interpreter, interpreter)
+	locs = detect_and_predict_mask(frame, face_interpreter, interpreter)
 	# loop over the detected face locations and their corresponding
 	# locations
-	for (box, pred) in zip(locs, preds):
+	# for (box, pred) in zip(locs, preds):
+	for box in locs:
 		# unpack the bounding box and predictions
 		(startX, startY, endX, endY) = box
 
-		mask = pred[0]
-		withoutMask = pred[1]
-		# (mask, withoutMask) = pred
+		# mask = pred[0]
+		# withoutMask = pred[1]
+		# # (mask, withoutMask) = pred
 
-		# determine the class label and color we'll use to draw
-		# the bounding box and text
-		label = "Mask" if mask > withoutMask else "No Mask"
-		color = (0, 255, 0) if label == "Mask" else (0, 0, 255)
+		# # determine the class label and color we'll use to draw
+		# # the bounding box and text
+		# label = "Mask" if mask > withoutMask else "No Mask"
+		# color = (0, 255, 0) if label == "Mask" else (0, 0, 255)
 
-		# include the probability in the label
-		label = "{}: {:.2f}%".format(label, max(mask, withoutMask) * 100)
+		# # include the probability in the label
+		# label = "{}: {:.2f}%".format(label, max(mask, withoutMask) * 100)
 
 		# display the label and bounding box rectangle on the output
 		# frame
-		cv2.putText(frame, label, (startX, startY - 10),
+		# cv2.putText(frame, label, (startX, startY - 10),
+		# 	cv2.FONT_HERSHEY_SIMPLEX, 0.45, color, 2)
+		cv2.putText(frame, "test", (startX, startY - 10),
 			cv2.FONT_HERSHEY_SIMPLEX, 0.45, color, 2)
 		cv2.rectangle(frame, (startX, startY), (endX, endY), color, 2)
 

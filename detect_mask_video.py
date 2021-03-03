@@ -85,8 +85,8 @@ maskNet = load_model("mask_detector_new.model")
 print("[INFO] starting video stream...")
 # vs = VideoStream(src=0).start()
 cap = cv2.VideoCapture(0)
-cap.set(3,1920)
-cap.set(4,1080)
+# cap.set(3,1920)
+# cap.set(4,1080)
 
 
 cv2.namedWindow("Frame", cv2.WND_PROP_FULLSCREEN)
