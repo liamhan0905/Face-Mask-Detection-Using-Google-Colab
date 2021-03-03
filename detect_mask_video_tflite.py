@@ -9,6 +9,18 @@ import imutils
 import time
 import cv2
 import os
+import argparse
+import sys
+import time
+from threading import Thread
+import importlib.util
+
+
+
+### get it working with just tflite
+####https://www.youtube.com/watch?v=qJMwNHQNOVU (5:39) will tell how to convert it to tpu
+
+
 
 
 import argparse
@@ -22,9 +34,15 @@ def detect_and_predict_mask(frame, face_interpreter, interpreter):
 	# grab the dimensions of the frame and then construct a blob
 	# from it
 	(h, w) = frame.shape[:2]
+<<<<<<< Updated upstream
 	blob = cv2.dnn.blobFromImage(frame, 1.0, (320, 320),
 		(104.0, 177.0, 123.0))
 
+=======
+	# blob = cv2.dnn.blobFromImage(frame, 1.0, (320, 320),
+	# 	(104.0, 177.0, 123.0))
+	frame = cv2.resize(frame, dsize=(320,320), interpolation=cv2.INTER_CUBIC)
+>>>>>>> Stashed changes
 	# pass the blob through the network and obtain the face detections
 	# faceNet.setInput(blob)
 	# detections = faceNet.forward()
@@ -97,12 +115,20 @@ def detect_and_predict_mask(frame, face_interpreter, interpreter):
 	# # locations
 	# return (locs, preds)
 
-# import pdb
-# pdb.set_trace()
 # load our serialized face detector model from disk
 # prototxtPath = "./face_detector/deploy.prototxt"
 # weightsPath = "./face_detector/res10_300x300_ssd_iter_140000.caffemodel"
 # faceNet = cv2.dnn.readNet(prototxtPath, weightsPath)
+use_TPU = True
+pkg = importlib.util.find_spec('tflite_runtime')
+if pkg:
+    from tflite_runtime.interpreter import Interpreter
+    if use_TPU:
+        from tflite_runtime.interpreter import load_delegate
+else:
+    from tensorflow.lite.python.interpreter import Interpreter
+    if use_TPU:
+        from tensorflow.lite.python.interpreter import load_delegate
 
 face_path = "ssd_mobilenet_v2_face_quant_postprocess_edgetpu.tflite"
 
